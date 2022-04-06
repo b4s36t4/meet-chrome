@@ -9,3 +9,18 @@ window.onload = function () {
         })
     })
 }
+
+// useEffect(() => {
+//     if (!isTokenSave || !window) return;
+//     const call = async () => {
+//       const token = localStorage.getItem("token")
+//       console.log(token)
+//       const req = await axios.get(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${new Date().toISOString()}`, {
+//         headers: {
+//           "Authorization": `Bearer ${token}`
+//         }
+//       })
+//       console.log(req)
+//     }
+//     call();
+//   }, [isTokenSave])
