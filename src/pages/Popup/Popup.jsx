@@ -10,6 +10,7 @@ const Popup = () => {
   const [remindMinutes, setRemindMinutes] = useState(10)
   const [meetTitle, setMeetTitle] = useState("")
   const [error, setError] = useState(false)
+  const [gmeetLink, setGMeetLink] = useState("");
   useEffect(() => {
     if (window) {
       const item = window.localStorage.getItem("token")
@@ -31,48 +32,58 @@ const Popup = () => {
     return r
   }
   const createEvent = async () => {
-    const token = localStorage.getItem("token")
-    if (startTime === endTime || !meetTitle || !token) return;
-    const url = "https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1"
-    const body = {
-      "start": {
-        "dateTime": new Date(startTime).toISOString(),
-        "timeZone": "Asia/Kolkata"
-      },
-      "end": {
-        "dateTime": new Date(endTime).toISOString(),
-        "timeZone": "Asia/Kolkata"
-      },
-      conferenceData: {
-        createRequest: {
-          conferenceSolutionKey: { "type": "hangoutsMeet" },
-          requestId: random()
+    chrome.identity.getAuthToken({ interactive: true }, async (token) => {
+      if (startTime === endTime || !meetTitle) return;
+      const url = "https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1"
+      const body = {
+        "start": {
+          "dateTime": new Date(startTime).toISOString(),
+          "timeZone": "Asia/Kolkata"
+        },
+        "end": {
+          "dateTime": new Date(endTime).toISOString(),
+          "timeZone": "Asia/Kolkata"
+        },
+        conferenceData: {
+          createRequest: {
+            conferenceSolutionKey: { "type": "hangoutsMeet" },
+            requestId: random()
+          }
+        },
+        "guestsCanSeeOtherGuests": false,
+        "reminders": {
+          useDefault: false,
+          overrides: [
+            { "method": "popup", minutes: remindMinutes }
+          ]
+        },
+        summary: meetTitle
+      }
+      try {
+        const req = await axios.post(url, JSON.stringify(body), { headers: { "Authorization": `Bearer ${token}` } })
+        console.log(req)
+        if (req.status === 200) {
+          const meetLink = req.data?.hangoutLink
+          setGMeetLink(meetLink)
         }
-      },
-      "guestsCanSeeOtherGuests": false,
-      "reminders": {
-        useDefault: false,
-        overrides: [
-          { "method": "popup", minutes: remindMinutes }
-        ]
-      },
-      summary: meetTitle
-    }
-    try {
-      const req = await axios.post(url, JSON.stringify(body), { headers: { "Authorization": `Bearer ${token}` } })
-      console.log(req)
-    }
-    catch (e) {
-      console.log(e)
-      setError(true);
-      // logOut()
-    }
+      }
+      catch (e) {
+        console.log(e)
+        setError(true);
+        // logOut()
+      }
+    })
   }
   return (
     <div >
       {error && <p>There's been error, please log-out and login again to try again.</p>}
       {isTokenSave ?
         <div className='container'>
+          {gmeetLink &&
+            <div style={{ marginBottom: 20 }}>
+              <p>Create New Meet Link</p>
+              <pre style={{ fontWeight: "bold" }}>{gmeetLink}</pre>
+            </div>}
           <h1>Create Your Meet Here</h1>
           <div style={{ marginTop: 20 }}>
             <input placeholder='Enter Meet Title' onChange={(e) => setMeetTitle(e.target.value)} className={"input"} />
